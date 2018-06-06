@@ -57,30 +57,30 @@ class JokerObject:
     Distance matrix 100 x 100 by items
     coords is (user, item) to guess
 '''
-def get_avg_weighted_sum(distance_matrix, data_matrix, coords):
+def get_avg_weighted_sum(data_matrix, coords, distance_matrix):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
         data_matrix = copy.deepcopy(data_matrix)
         data_matrix.set_object_nan(coords[0],coords[1])
     return data_matrix.get_item_m(coords[1]) + (1/distance_matrix.sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in range(distance_matrix.shape[0]) if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
 
 
-def get_average_ranking(data_matrix, coords):
+def get_average_ranking(data_matrix, coords, distance_matrix=None):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
         data_matrix = copy.deepcopy(data_matrix)
         data_matrix.set_object_nan(coords[0],coords[1])
     utilities = [data_matrix.get_item(c,coords[1])for c in range(data_matrix.get_matrix().shape[0]) if not np.isnan(data_matrix.get_item(c, coords[1]))]
     return (1/len(utilities))*sum(utilities)
 
-def get_adjusted_weighted_Nnn_sum(distance_matrix, data_matrix, coords, N = 3):
+def get_adjusted_weighted_Nnn_sum(data_matrix, coords, distance_matrix, N = 3):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
         data_matrix = copy.deepcopy(data_matrix)
         data_matrix.set_object_nan(coords[0],coords[1])
     return data_matrix.get_item_m(coords[1]) + (1/distance_matrix.sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in dist[coords[1],].argsort()[:N] if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
 
-def makePrediction(userItemTuple,method,dataMatrix):
+def makePrediction(userItemTuple,method,dataMatrix,distance_matrix=None):
     methods = {1:get_average_ranking,2:get_avg_weighted_sum,3:get_adjusted_weighted_Nnn_sum}
     jokerDataMatrix = JokerObject(dataMatrix)
-    return methods[method](jokerDataMatrix,userItemTuple)
+    return methods[method](jokerDataMatrix,userItemTuple,distance_matrix)
 
 def get_matrix():
     return pd.read_csv('jester-data-1.csv', header=None, na_values=99).iloc[:,1:].values
@@ -104,6 +104,9 @@ def evaluate(dataMatrix,method=-1,size=1,repeats=1):
         '''
         Evaluate
         '''
+        distance_matrix = None
+        if (method in [2,3]):
+            distance_matrix = get_distances()
         maeList = []
         for i in range(repeats):
           print("test number: {}".format(i))
@@ -111,13 +114,21 @@ def evaluate(dataMatrix,method=-1,size=1,repeats=1):
           sampleMAE = []
           print("userID, itemID, Actual_Rating, Predicted_Rating, Delta_Rating")
           for uTuple in userItemTuples:
-              sampleMAE.append(singleMAE(uTuple,dataMatrix,method))
+              sampleMAE.append(singleMAE(uTuple,dataMatrix,method,distance_matrix))
           mae = np.mean(sampleMAE)
           print("MAE for test: {} = {}\n".format(i,mae))
           maeList.append(mae)
         print('Overall Evaluation:')
         print('Mean MAE = {}'.format(np.mean(maeList)))
         print('SD MAE = {}'.format(np.std(maeList)))
+
+def get_distances():
+    file = open('distance_items.txt').readlines()
+    t = []
+    for i,line in enumerate(file):
+        new_ln = [float(i) for i in line.replace("\n","").split(",")]
+        t.append(new_ln)
+    return np.array(t)
 
 def getRandom(size,dataMatrix):
     '''
@@ -142,8 +153,8 @@ def getValidUserItem(dataMatrix):
       temp = dataMatrix[UserId][ItemId]
     return (UserId,ItemId)
 
-def singleMAE(userItemTuple,dataMatrix,method):
-    pred = makePrediction(userItemTuple,method,dataMatrix)
+def singleMAE(userItemTuple,dataMatrix,method,distance_matrix):
+    pred = makePrediction(userItemTuple,method,dataMatrix,distance_matrix)
     actu = dataMatrix[userItemTuple[0]][userItemTuple[1]]
     delta = abs(actu-pred)
     print("{}, {}, {}, {}, {}".format(userItemTuple[0],userItemTuple[1],actu,pred,delta))
