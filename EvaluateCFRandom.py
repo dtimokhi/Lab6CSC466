@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import copy
 import sys
 
 class JokerObject:
@@ -51,6 +52,12 @@ def get_adjusted_weighted_Nnn_sum(distance_matrix, data_matrix, coords, N = 3):
         data_matrix.set_object_nan(coords[0],coords[1])
     return data_matrix.get_user_m(coords[0]) + (1/distance_matrix.sum(axis=0)[coords[0]])*np.sum(distance_matrix[coords[0]][c_prime]*(data_matrix.get_item(c_prime, coords[1])-data_matrix.get_user_m(c_prime))for c_prime in dist[coords[0],].argsort()[:N] if not np.isnan(data_matrix.get_item(c_prime, coords[1])))
 
+
+def makePrediction(userItemTuple,method,dataMatrix):
+    methods = {1:get_average_ranking,2:get_avg_weighted_sum,3:get_adjusted_weighted_Nnn_sum}
+    jokerDataMatrix = JokerObject(dataMatrix)
+    return methods[method](jokerDataMatrix,userItemTuple)
+
 def get_matrix():
     return pd.read_csv('jester-data-1.csv', header=None, na_values=99).iloc[:,1:].values
 
@@ -80,7 +87,7 @@ def evaluate(dataMatrix,method=-1,size=1,repeats=1):
           sampleMAE = []
           print("userID, itemID, Actual_Rating, Predicted_Rating, Delta_Rating")
           for uTuple in userItemTuples:
-              sampleMAE.append(singleMAE(uTuple,dataMatrix))
+              sampleMAE.append(singleMAE(uTuple,dataMatrix,method))
           mae = np.mean(sampleMAE)
           print("MAE for test: {} = {}\n".format(i,mae))
           maeList.append(mae)
@@ -104,21 +111,19 @@ def getValidUserItem(dataMatrix):
     That has a valid rating
     '''
     temp = np.nan
+    shapeDM = dataMatrix.shape
     while(np.isnan(temp)):
-      ItemId = np.random.randint(0,100)
-      UserId = np.random.randint(0,24983)
+      ItemId = np.random.randint(0,shapeDM[1])
+      UserId = np.random.randint(0,shapeDM[0])
       temp = dataMatrix[UserId][ItemId]
     return (UserId,ItemId)
 
-def singleMAE(userItemTuple,dataMatrix):
-    pred = makePrediction(userItemTuple)
+def singleMAE(userItemTuple,dataMatrix,method):
+    pred = makePrediction(userItemTuple,method,dataMatrix)
     actu = dataMatrix[userItemTuple[0]][userItemTuple[1]]
     delta = abs(actu-pred)
     print("{}, {}, {}, {}, {}".format(userItemTuple[0],userItemTuple[1],actu,pred,delta))
     return delta
-
-def makePrediction(userItemTuple):
-    return 0
 
 if __name__ == "__main__":
   dataMatrix = get_matrix()
