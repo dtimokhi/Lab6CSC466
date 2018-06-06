@@ -3,41 +3,66 @@ import pandas as pd
 import copy
 import sys
 
+
 class JokerObject:
     def __init__(self, matrix):
         self.matrix = matrix
         self.item_means = np.nanmean(matrix, 0)
         self.user_means = np.nanmean(matrix, 1)
+
     def get_matrix(self):
         return self.matrix
+
     def get_items_m(self):
         return self.item_means
+
     def get_item_m(self, key):
         return self.item_means[key]
+
     def get_users_m(self):
         return self.user_means
+
     def get_user_m(self, key):
         return self.user_means[key]
+
     def get_item(self, row, col):
         return self.matrix[row][col]
+
     def set_object_nan(self, row, col):
         self.matrix[row][col] = np.nan
+
     def get_pearson_matrix(self):
-        distances = np.zeros((len(self.user_means),len(self.user_means)))
-        for i, user_1 in enumerate(self.matrix):
-            for j, user_2 in enumerate(self.matrix):
-                if(i>j):
+        distances = np.zeros((len(self.item_means), len(self.item_means)))
+        transposes = self.matrix.transpose()
+        t0 = dt.datetime.now()
+        for i, item_1 in enumerate(transposes):
+            if i % 1 == 0:
+                print(i)
+                print("time: ", dt.datetime.now() - t0)
+            for j, item_2 in enumerate(transposes):
+                if (i > j):
                     continue
                 if i != j:
-                    distances[i,j] = np.sum((a-self.user_means[i])*(b-self.user_means[j]) for a,b in zip(user_1,user_2) if np.isnan(a)== False and np.isnan(b) == False)/np.sqrt(np.sum(np.square(a-self.user_means[i]) for index, a in enumerate(user_1) if np.isnan(a)== False and np.isnan(user_2[index]) == False)*np.sum(np.square(b-self.user_means[j]) for index, b in enumerate(user_2) if np.isnan(b)== False and np.isnan(user_1[index]) == False))
-                    distances[j,i] = distances[i,j]
+                    top = np.sum((a - self.item_means[i]) * (b - self.item_means[j]) for a, b in zip(item_1, item_2) if
+                                 np.isnan(a) == False and np.isnan(b) == False)
+                    bot = np.sqrt(np.sum(np.square(a - self.item_means[i]) for index, a in enumerate(item_1) if
+                                         np.isnan(a) == False and np.isnan(item_2[index]) == False) * np.sum(
+                        np.square(b - self.item_means[j]) for index, b in enumerate(item_2) if
+                        np.isnan(b) == False and np.isnan(item_1[index]) == False))
+                    distances[i, j] = top / bot
+                    distances[j, i] = distances[i, j]
         return distances
 
+'''
+    Distance matrix 100 x 100 by items
+    coords is (user, item) to guess
+'''
 def get_avg_weighted_sum(distance_matrix, data_matrix, coords):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
         data_matrix = copy.deepcopy(data_matrix)
         data_matrix.set_object_nan(coords[0],coords[1])
-    return data_matrix.get_user_m(coords[0]) + (1/distance_matrix.sum(axis=0)[coords[0]])*np.sum(distance_matrix[coords[0]][c_prime]*(data_matrix.get_item(c_prime, coords[1])-data_matrix.get_user_m(c_prime))for c_prime in range(distance_matrix.shape[0]) if not np.isnan(data_matrix.get_item(c_prime, coords[1])))
+    return data_matrix.get_item_m(coords[1]) + (1/distance_matrix.sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in range(distance_matrix.shape[0]) if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
+
 
 def get_average_ranking(data_matrix, coords):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
@@ -50,8 +75,7 @@ def get_adjusted_weighted_Nnn_sum(distance_matrix, data_matrix, coords, N = 3):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
         data_matrix = copy.deepcopy(data_matrix)
         data_matrix.set_object_nan(coords[0],coords[1])
-    return data_matrix.get_user_m(coords[0]) + (1/distance_matrix.sum(axis=0)[coords[0]])*np.sum(distance_matrix[coords[0]][c_prime]*(data_matrix.get_item(c_prime, coords[1])-data_matrix.get_user_m(c_prime))for c_prime in dist[coords[0],].argsort()[:N] if not np.isnan(data_matrix.get_item(c_prime, coords[1])))
-
+    return data_matrix.get_item_m(coords[1]) + (1/distance_matrix.sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in dist[coords[1],].argsort()[:N] if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
 
 def makePrediction(userItemTuple,method,dataMatrix):
     methods = {1:get_average_ranking,2:get_avg_weighted_sum,3:get_adjusted_weighted_Nnn_sum}
