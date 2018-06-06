@@ -61,7 +61,7 @@ def get_avg_weighted_sum(data_matrix, coords, distance_matrix):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
         data_matrix = copy.deepcopy(data_matrix)
         data_matrix.set_object_nan(coords[0],coords[1])
-    return data_matrix.get_item_m(coords[1]) + (1/distance_matrix.sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in range(distance_matrix.shape[0]) if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
+    return data_matrix.get_item_m(coords[1]) + (1/np.abs(distance_matrix).sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in range(distance_matrix.shape[0]) if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
 
 
 def get_average_ranking(data_matrix, coords, distance_matrix=None):
@@ -71,11 +71,11 @@ def get_average_ranking(data_matrix, coords, distance_matrix=None):
     utilities = [data_matrix.get_item(c,coords[1])for c in range(data_matrix.get_matrix().shape[0]) if not np.isnan(data_matrix.get_item(c, coords[1]))]
     return (1/len(utilities))*sum(utilities)
 
-def get_adjusted_weighted_Nnn_sum(data_matrix, coords, distance_matrix, N = 3):
+def get_adjusted_weighted_Nnn_sum(data_matrix, coords, distance_matrix, N = 7):
     if not np.isnan(data_matrix.get_item(coords[0],coords[1])):
         data_matrix = copy.deepcopy(data_matrix)
         data_matrix.set_object_nan(coords[0],coords[1])
-    return data_matrix.get_item_m(coords[1]) + (1/distance_matrix.sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in dist[coords[1],].argsort()[:N] if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
+    return data_matrix.get_item_m(coords[1]) + (1/np.abs(distance_matrix).sum(axis=0)[coords[1]])*np.sum(distance_matrix[coords[1]][c_prime]*(data_matrix.get_item(coords[0], c_prime)-data_matrix.get_item_m(c_prime))for c_prime in distance_matrix[coords[1],].argsort()[:N] if not np.isnan(data_matrix.get_item(coords[0], c_prime)))
 
 def makePrediction(userItemTuple,method,dataMatrix,distance_matrix=None):
     methods = {1:get_average_ranking,2:get_avg_weighted_sum,3:get_adjusted_weighted_Nnn_sum}
