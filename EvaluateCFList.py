@@ -3,7 +3,7 @@ import pandas as pd
 import EvaluateCFRandom as helper
 import sys
 
-def evaluate(dataMatrix,method=-1,list=""):
+def evaluate(dataMatrix,distance_matrix,method=-1,list=""):
     '''
     method = Which collaborative filtering techniques will be tested
     list = path to file which contains a list of tuples(UserID,ItemID)
@@ -28,7 +28,7 @@ def evaluate(dataMatrix,method=-1,list=""):
         sampleMAE = []
         print("userID, itemID, Actual_Rating, Predicted_Rating, Delta_Rating")
         for uTuple in userItemTuples:
-         sampleMAE.append(helper.singleMAE(uTuple,dataMatrix))
+         sampleMAE.append(helper.singleMAE(uTuple,dataMatrix,method,distance_matrix))
         mae = np.mean(sampleMAE)
         print("MAE = {}\n".format(mae))
 
@@ -50,9 +50,11 @@ def readList(dataMatrix,list):
 
 if __name__ == "__main__":
   dataMatrix = helper.get_matrix()
+  distance_matrix = None
   if len(sys.argv) < 3:
-      evaluate(dataMatrix)
+      evaluate(dataMatrix,distance_matrix)
   else:
       method = int(sys.argv[1])
       list = sys.argv[2]
-      evaluate(dataMatrix,method,list)
+      distance_matrix = helper.get_distances()
+      evaluate(dataMatrix,distance_matrix,method,list)
